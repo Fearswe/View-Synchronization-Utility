@@ -1,0 +1,11 @@
+{
+  "SolutionPath": "C:\\path\\to\\solution",
+  "DestinationPath": "C:\\inetpub\\wwwroot\\path\\to\\site",
+  "Log": true,
+  "LogPath": "C:\\vsulogs\\",
+  "Notify": false,
+  "NotifyCreated": true,
+  "NotifyChanged": true,
+  "NotifyRenamed": true,
+  "NotifyRemoved": true
+}

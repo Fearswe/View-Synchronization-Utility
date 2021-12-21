@@ -19,7 +19,7 @@ try
             if (e.Exception is Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Trace.TraceError(ex.Message);
+                Utils.WriteToTrace(ex.Message, null, true);
             }
         };
         AppDomain.CurrentDomain.UnhandledException += (s, e) =>
@@ -27,12 +27,12 @@ try
             if (e.ExceptionObject is Exception ex)
             {
                 MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Trace.TraceError(ex.Message);
+                Utils.WriteToTrace(ex.Message, null, true);
             }
         };
     }
     var assemblyName = Assembly.GetExecutingAssembly().GetName();
-    Trace.TraceInformation($"{assemblyName.Name} v{assemblyName.Version} starting.");
+    Utils.WriteToTrace($"{assemblyName.Name} v{assemblyName.Version} starting.");
     var configPath = @".\appconfig.json";
     if (args.Length > 0)
     {
@@ -43,7 +43,7 @@ try
     }
     var appConfig = AppConfig.GetAppConfig(configPath);
     appConfig.AssemblyName = assemblyName;
-    Trace.TraceInformation("Config loaded");
+    Utils.WriteToTrace("Config loaded");
     appConfig.OnChange += (s, e) =>
     {
         appConfig.SetAppConfig(configPath);
@@ -70,7 +70,7 @@ try
             }
         }
 
-        Trace.TraceInformation("Updated config");
+        Utils.WriteToTrace("Updated config");
     };
     if(appConfig.DebugLog)
     {
@@ -94,9 +94,9 @@ try
 
 
     var trayIcon = new TrayIcon(appConfig);
-    Trace.TraceInformation("TrayIcon initiated");
+    Utils.WriteToTrace("TrayIcon initiated");
     var logger = new Logger(appConfig);
-    Trace.TraceInformation("Logger initiated");
+    Utils.WriteToTrace("Logger initiated");
 
     var watcher = new Watcher(appConfig);
     watcher.OnChange += (s, e) =>
@@ -109,10 +109,10 @@ try
         catch (Exception ex)
         {
             trayIcon.SendNotification("Failed to write to log", ex.Message, WatcherChangeTypes.All);
-            Trace.TraceError(ex.Message);
+            Utils.WriteToTrace(ex.Message, null, true);
         }
     };
-    Trace.TraceInformation("Watcher initiated");
+    Utils.WriteToTrace("Watcher initiated");
 
 
     Application.Run(); // Wait for eternity until the sweet release of death at the hands of the merciful overlord in charge of the machine.
@@ -120,5 +120,5 @@ try
 catch (Exception ex)
 {
     MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    Trace.TraceError(ex.Message);
+    Utils.WriteToTrace(ex.Message, null, true);
 }

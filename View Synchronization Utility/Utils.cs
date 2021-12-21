@@ -8,6 +8,7 @@
     using System.Threading.Tasks;
     using System.Runtime.InteropServices;
     using System.Diagnostics;
+    using System.Runtime.CompilerServices;
 
     internal static class Utils
     {
@@ -27,7 +28,6 @@
             return ShowWindow(window, show ? SW_SHOW : SW_HIDE);
         }
 
-
         public static Icon GetEmbeddedIcon(String fileName)
         {
             using (var stream = GetEmbeddedResourceStream(fileName))
@@ -40,33 +40,19 @@
         {
             using (var stream = GetEmbeddedResourceStream(fileName))
             {
-                 return Image.FromStream(stream);
+                return Image.FromStream(stream);
             }
 
         }
 
-        public static Boolean FindTraceListenerByName(String name, out TraceListener? traceListener)
-        {
-            traceListener = null;
-            foreach(TraceListener listener in Trace.Listeners)
-            {
-                if(listener.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                {
-                    traceListener = listener;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private static Stream GetEmbeddedResourceStream (String fileName) 
+        private static Stream GetEmbeddedResourceStream(String fileName)
         {
             var assembly = Assembly.GetExecutingAssembly();
             var resourceName = assembly.GetManifestResourceNames().FirstOrDefault(x => x.Contains(fileName));
-            if(resourceName != null)
+            if (resourceName != null)
             {
                 var stream = assembly.GetManifestResourceStream(resourceName);
-                if(stream != null)
+                if (stream != null)
                 {
                     return stream;
                 }
@@ -80,5 +66,33 @@
                 throw new FileNotFoundException("No embedded resource with provided name found.", fileName);
             }
         }
+
+        public static Boolean FindTraceListenerByName(String name, out TraceListener? traceListener)
+        {
+            traceListener = null;
+            foreach (TraceListener listener in Trace.Listeners)
+            {
+                if (listener.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    traceListener = listener;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static void WriteToTrace(String message, Object? owner = null, Boolean isError = false, [CallerMemberName] String caller = "")
+        {
+            var formattedMessage = $"[{(owner?.GetType().Name ?? "Program")}].[{caller}] {message}";
+            if (isError)
+            {
+                Trace.TraceError(formattedMessage);
+            }
+            else
+            {
+                Trace.TraceInformation(formattedMessage);
+            }
+        }
     }
+
 }

@@ -21,3 +21,8 @@ The code isn't very pretty, and it depends on a few specific DLL's to be install
 Will (maybe) fix later.
 
 Also note, it was developed with VS2022 .NET 6.0 and I leave no guarantees it will work with VS2019.
+
+## Licensing and stuff
+Published under Apache [Apache-2.0 License](LICENSE)
+I take no responsibility if any work gets lost. Use at own risk.
+Icons by [Remix Design](https://remixicon.com/)

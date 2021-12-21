@@ -1,19 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<OutputType>WinExe</OutputType>
+		<OutputType>Exe</OutputType>
 		<TargetFramework>net6.0-windows</TargetFramework>
 		<RootNamespace>View_Synchronization_Utility</RootNamespace>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<DebugType>embedded</DebugType>
 		<NeutralLanguage>en</NeutralLanguage>
-		<ProductVersion>1.0.3</ProductVersion>
-		<AssemblyVersion>1.0.3</AssemblyVersion>
-		<FileVersion>1.0.3</FileVersion>
+		<ProductVersion>1.1.0</ProductVersion>
+		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<FileVersion>1.1.0</FileVersion>
 		<ApplicationIcon>Icons\VSU-On.ico</ApplicationIcon>
 	
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Icons\console.png" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Content Include="appconfig.json">
@@ -25,6 +29,7 @@
 		<EmbeddedResource Include="Icons\Checkbox-checked.png" />
 		<EmbeddedResource Include="Icons\Checkbox-unchecked.png" />
 		<EmbeddedResource Include="Icons\close-circle.png" />
+		<EmbeddedResource Include="Icons\console.png" />
 		<EmbeddedResource Include="Icons\FolderDown.png" />
 		<EmbeddedResource Include="Icons\FolderLeft.png" />
 		<EmbeddedResource Include="Icons\FolderRight.png" />

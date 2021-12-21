@@ -8,6 +8,7 @@
     using System.Text.Json;
     using System.Text.Json.Serialization;
     using System.Runtime.CompilerServices;
+    using System.Reflection;
 
     public class AppConfig
     {
@@ -22,7 +23,26 @@
         public Boolean Paused { get; set; }
 
         [JsonIgnore]
+        public Boolean IsConsoleOpen { get; set; } = true;
+
+        [JsonIgnore]
+        public AssemblyName AssemblyName { get; set; }
+
+        [JsonIgnore]
         public Boolean ShouldTriggerEvent { get; set; }
+
+        private Boolean _debugLog = false;
+        [TrayIcon.TrayButtonInfo("Debug log", TrayIcon.ButtonIcons.Checkbox)]
+        public Boolean DebugLog 
+        { 
+            get => this._debugLog; 
+            set
+            {
+                this._debugLog = value;
+                this.TriggerEvent();
+            } 
+        }
+
 
         private String _solutionPath = String.Empty;
         [TrayIcon.TrayButtonInfo("Solution path", TrayIcon.ButtonIcons.FolderUp)]
@@ -154,6 +174,17 @@
                     this._notifyRemoved = value;
                     this.TriggerEvent();
                 }
+            }
+        }
+
+        private int _retryWait = 2000;
+        public int RetryWait 
+        { 
+            get => this._retryWait;
+            set 
+            { 
+                this._retryWait = value;
+                this.TriggerEvent();
             }
         }
 

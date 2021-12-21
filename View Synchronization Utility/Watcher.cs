@@ -5,16 +5,20 @@
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
+    using System.Diagnostics;
+    using System.Collections.Concurrent;
 
     public class Watcher
     {
         private FileSystemWatcher? FileSystemWatcher { get; set; }
         public event EventHandler<ChangedEventArgs>? OnChange;
         private AppConfig AppConfig { get; }
+        private List<String> FileHandles { get; }
 
         public Watcher(AppConfig appConfig)
         {
             this.AppConfig = appConfig;
+            this.FileHandles = new List<String>();
 
             this.CreateOrUpdateWatcher();
             this.AppConfig.OnChange += this.AppConfig_OnChange;
@@ -73,6 +77,30 @@
 
         }
 
+        private Boolean ReserveFileHandle(String path)
+        {
+            lock (this.FileHandles)
+            {
+                if (this.FileHandles.Contains(path))
+                {
+                    return false;
+                }
+                this.FileHandles.Add(path);
+                return true;
+            }
+        }
+
+        private void ReleaseFileHandle(String path)
+        {
+            lock (this.FileHandles)
+            {
+                if (this.FileHandles.Contains(path))
+                {
+                    this.FileHandles.Remove(path);
+                }
+            }
+        }
+
         private void FileSystemWatcher_Error(object sender, ErrorEventArgs e)
         {
             var eventArgs = new ChangedEventArgs()
@@ -82,6 +110,7 @@
                 ChangeEventType = WatcherChangeTypes.All
 
             };
+            Trace.TraceError($"[{this.GetType().Name}] Exception: {e.GetException().Message}");
             this.OnChange?.Invoke(this, eventArgs);
         }
 
@@ -95,72 +124,79 @@
             if (e.FullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
             {
                 var eventArgs = new ChangedEventArgs();
+                var mappedPath = this.MapDestinationPath(e.FullPath);
                 try
                 {
-                    var mappedPath = this.MapDestinationPath(e.FullPath);
-                    
-
+                   
                     if (!String.IsNullOrWhiteSpace(mappedPath))
                     {
-                        try
-                        {
-                            this.HandleUpdate(e.FullPath, mappedPath);
-                        }
-                        catch (IOException)
+                        if (this.ReserveFileHandle(mappedPath))
                         {
                             try
                             {
-                                Thread.Sleep(1000);
                                 this.HandleUpdate(e.FullPath, mappedPath);
+                                Trace.TraceInformation($"[{this.GetType().Name}] Updated: {mappedPath}");
                             }
-                            catch (IOException ex)
-                            {
-                                eventArgs.Title = ex.Message;
-                                eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
-                                eventArgs.ChangeEventType = WatcherChangeTypes.All;
-                            }
-                        }
-
-                        if (e.OldFullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // True rename
-                            var mappedOldPath = this.MapDestinationPath(e.OldFullPath);
-
-                            eventArgs.Title = e.ChangeType.ToString();
-                            eventArgs.Text = $"{mappedOldPath} -> {mappedPath}";
-                            eventArgs.ChangeEventType = e.ChangeType;
-                            
-                            if (!String.IsNullOrWhiteSpace(mappedOldPath) && File.Exists(mappedOldPath))
+                            catch (IOException)
                             {
                                 try
                                 {
-                                    this.HandleDeletion(mappedPath);
+                                    Thread.Sleep(this.AppConfig.RetryWait);
+                                    this.HandleUpdate(e.FullPath, mappedPath);
+                                    Trace.TraceInformation($"[{this.GetType().Name}] Updated 2nd attempt: {mappedPath}");
                                 }
-                                catch (IOException)
+                                catch (IOException ex)
+                                {
+                                    eventArgs.Title = ex.Message;
+                                    eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
+                                    eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                    Trace.TraceError($"[{this.GetType().Name}] Failed to update: {mappedPath}{Environment.NewLine}{ex.Message}");
+                                }
+                            }
+
+                            if (e.OldFullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // True rename
+                                var mappedOldPath = this.MapDestinationPath(e.OldFullPath);
+
+                                eventArgs.Title = e.ChangeType.ToString();
+                                eventArgs.Text = $"{mappedOldPath} -> {mappedPath}";
+                                eventArgs.ChangeEventType = e.ChangeType;
+
+                                if (!String.IsNullOrWhiteSpace(mappedOldPath) && File.Exists(mappedOldPath))
                                 {
                                     try
                                     {
-                                        Thread.Sleep(1000);
                                         this.HandleDeletion(mappedPath);
+                                        Trace.TraceInformation($"[{this.GetType().Name}] Deleted: {mappedPath}");
                                     }
-                                    catch (IOException ex)
+                                    catch (IOException)
                                     {
-                                        eventArgs.Title = ex.Message;
-                                        eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
-                                        eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                        try
+                                        {
+                                            Thread.Sleep(this.AppConfig.RetryWait);
+                                            this.HandleDeletion(mappedPath);
+                                            Trace.TraceInformation($"[{this.GetType().Name}] Deleted 2nd attempt: {mappedPath}");
+                                        }
+                                        catch (IOException ex)
+                                        {
+                                            eventArgs.Title = ex.Message;
+                                            eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
+                                            eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                            Trace.TraceError($"[{this.GetType().Name}] Failed to delete: {mappedPath}{Environment.NewLine}{ex.Message}");
+                                        }
                                     }
                                 }
                             }
 
 
+                            else
+                            {
+                                eventArgs.ChangeEventType = WatcherChangeTypes.Changed;
+                                eventArgs.Title = eventArgs.ChangeEventType.ToString();
+                                eventArgs.Text = mappedPath;
+                            }
                         }
-                        else
-                        {
-                            eventArgs.ChangeEventType = WatcherChangeTypes.Changed;
-                            eventArgs.Title = eventArgs.ChangeEventType.ToString();
-                            eventArgs.Text = mappedPath;
-                        }
-
                     }
                 }
                 catch (Exception ex)
@@ -168,6 +204,11 @@
                     eventArgs.Title = "Exception thrown";
                     eventArgs.Text = ex.Message;
                     eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                    Trace.TraceError($"[{this.GetType().Name}].[{nameof(FileSystemWatcher_Renamed)}] Exception: {ex.Message}");
+                }
+                finally
+                {
+                    this.ReleaseFileHandle(mappedPath);
                 }
 
 
@@ -193,48 +234,57 @@
             {
                 if (!String.IsNullOrWhiteSpace(mappedPath))
                 {
-                    if (e.ChangeType == WatcherChangeTypes.Deleted)
+                    if (this.ReserveFileHandle(mappedPath))
                     {
-                        if (File.Exists(mappedPath))
+                        if (e.ChangeType == WatcherChangeTypes.Deleted)
+                        {
+                            if (File.Exists(mappedPath))
+                            {
+                                try
+                                {
+                                    this.HandleDeletion(mappedPath);
+                                    Trace.TraceInformation($"[{this.GetType().Name}] Deleted: {mappedPath}");
+                                }
+                                catch (IOException)
+                                {
+                                    try
+                                    {
+                                        Thread.Sleep(this.AppConfig.RetryWait);
+                                        this.HandleDeletion(mappedPath);
+                                        Trace.TraceInformation($"[{this.GetType().Name}] Deleted 2nd attempt: {mappedPath}");
+                                    }
+                                    catch (IOException ex)
+                                    {
+                                        eventArgs.Title = ex.Message;
+                                        eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
+                                        eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                        Trace.TraceError($"[{this.GetType().Name}] Failed to delete: {mappedPath}{Environment.NewLine}{ex.Message}");
+                                    }
+                                }
+                            }
+                        }
+                        else
                         {
                             try
                             {
-                                this.HandleDeletion(mappedPath);
+                                this.HandleUpdate(e.FullPath, mappedPath);
+                                Trace.TraceInformation($"[{this.GetType().Name}] Updated: {mappedPath}");
                             }
                             catch (IOException)
                             {
                                 try
                                 {
-                                    Thread.Sleep(1000);
-                                    this.HandleDeletion(mappedPath);
+                                    Thread.Sleep(this.AppConfig.RetryWait);
+                                    this.HandleUpdate(e.FullPath, mappedPath);
+                                    Trace.TraceInformation($"[{this.GetType().Name}] Updated 2nd attempt: {mappedPath}");
                                 }
                                 catch (IOException ex)
                                 {
                                     eventArgs.Title = ex.Message;
-                                    eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
+                                    eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
                                     eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                    Trace.TraceError($"[{this.GetType().Name}] Failed to update: {mappedPath}{Environment.NewLine}{ex.Message}");
                                 }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            this.HandleUpdate(e.FullPath, mappedPath);
-                        }
-                        catch (IOException)
-                        {
-                            try
-                            {
-                                Thread.Sleep(1000);
-                                this.HandleUpdate(e.FullPath, mappedPath);
-                            }
-                            catch (IOException ex)
-                            {
-                                eventArgs.Title = ex.Message;
-                                eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
-                                eventArgs.ChangeEventType = WatcherChangeTypes.All;
                             }
                         }
                     }
@@ -251,6 +301,11 @@
                 eventArgs.Title = "Exception thrown";
                 eventArgs.Text = ex.Message;
                 eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                Trace.TraceError($"[{this.GetType().Name}].[{nameof(FileSystemWatcher_Changed)}] Exception: {ex.Message}");
+            }
+            finally
+            {
+                this.ReleaseFileHandle(mappedPath);
             }
 
             this.OnChange?.Invoke(this, eventArgs);

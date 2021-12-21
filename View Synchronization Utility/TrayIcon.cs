@@ -32,12 +32,20 @@
             this.NotifyIcon = new NotifyIcon()
             {
                 Icon = this.RunningIcon,
-                Text = $"[Running] {Assembly.GetExecutingAssembly().GetName().Name}",
+                Text = $"[Running] {this.AppConfig.AssemblyName.Name} v{this.AppConfig.AssemblyName.Version}",
                 Visible = true,
                 ContextMenuStrip = this.ContextMenuStrip
             };
 
             this.Images = this.LoadImages();
+
+            var toggleConsole = new ToolStripButton("Toggle &Console", this.Images["console"])
+            {
+                Checked = this.AppConfig.IsConsoleOpen,
+                CheckOnClick = true
+            };
+            toggleConsole.CheckedChanged += this.ToggleConsole_CheckedChanged;
+            this.NotifyIcon.ContextMenuStrip.Items.Add(toggleConsole);
 
             var togglePausedButton = new ToolStripButton("&Pause", this.Images["pause"])
             {
@@ -51,6 +59,15 @@
 
             this.NotifyIcon.ContextMenuStrip.Items.Add(new ToolStripButton("E&xit", this.Images["close-circle"], this.OnClose));
 
+        }
+
+        private void ToggleConsole_CheckedChanged(Object? sender, EventArgs e)
+        {
+            if (sender is ToolStripButton button)
+            {
+                this.AppConfig.IsConsoleOpen = button.Checked;
+                Utils.ToggleConsoleWindow(button.Checked);
+            }
         }
 
         private Dictionary<String, Image> LoadImages()
@@ -68,7 +85,8 @@
                 { "close-circle", Utils.GetEmbeddedImage("close-circle") },
                 { "pause", Utils.GetEmbeddedImage("pause.png") },
                 { "resume", Utils.GetEmbeddedImage("resume.png") },
-                { "menu-open", Utils.GetEmbeddedImage("menu-open.png") }
+                { "menu-open", Utils.GetEmbeddedImage("menu-open.png") },
+                { "console", Utils.GetEmbeddedImage("console.png")}
             };
         }
 
@@ -168,7 +186,7 @@
             if (sender is ToolStripButton item)
             {
                 this.AppConfig.Paused = item.Checked;
-                this.NotifyIcon.Text = $"[{(item.Checked ? "Paused" : "Running")}] {Assembly.GetExecutingAssembly().GetName().Name}";
+                this.NotifyIcon.Text = $"[{(item.Checked ? "Paused" : "Running")}] {this.AppConfig.AssemblyName.Name} v{this.AppConfig.AssemblyName.Version}";
                 this.NotifyIcon.Icon = item.Checked ? this.PausedIcon : this.RunningIcon;
                 item.Text = item.Checked ? "&Resume" : "&Pause";
                 item.Image = item.Checked ? this.Images["resume"] : this.Images["pause"];

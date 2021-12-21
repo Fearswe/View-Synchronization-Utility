@@ -1,8 +1,10 @@
 {
   "SolutionPath": "C:\\path\\to\\solution",
   "DestinationPath": "C:\\inetpub\\wwwroot\\path\\to\\site",
+  "RetryWait": 2000,
   "Log": true,
   "LogPath": "C:\\vsulogs\\",
+  "DebugLog": true,
   "Notify": false,
   "NotifyCreated": true,
   "NotifyChanged": true,

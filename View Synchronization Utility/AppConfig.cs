@@ -43,6 +43,7 @@
             } 
         }
 
+        public List<String> PathsToIgnore { get; set; }
 
         private String _solutionPath = String.Empty;
         [TrayIcon.TrayButtonInfo("Solution path", TrayIcon.ButtonIcons.FolderUp)]

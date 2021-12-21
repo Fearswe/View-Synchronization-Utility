@@ -9,9 +9,28 @@ Trace.AutoFlush = true;
 Trace.CorrelationManager.ActivityId = Guid.NewGuid();
 
 Trace.Listeners.Add(new ConsoleTraceListener() { Name = "Console"});
-
 try
 {
+    if (!Debugger.IsAttached)
+    {
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        Application.ThreadException += (s, e) =>
+        {
+            if (e.Exception is Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Trace.TraceError(ex.Message);
+            }
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Trace.TraceError(ex.Message);
+            }
+        };
+    }
     var assemblyName = Assembly.GetExecutingAssembly().GetName();
     Trace.TraceInformation($"{assemblyName.Name} v{assemblyName.Version} starting.");
     var configPath = @".\appconfig.json";

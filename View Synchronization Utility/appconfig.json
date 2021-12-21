@@ -9,5 +9,6 @@
   "NotifyCreated": true,
   "NotifyChanged": true,
   "NotifyRenamed": true,
-  "NotifyRemoved": true
+  "NotifyRemoved": true,
+  "PathsToIgnore": [ "obj","bin",".git",".vs","packages" ]
 }

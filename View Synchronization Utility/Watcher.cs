@@ -91,36 +91,85 @@
             {
                 return;
             }
+
             if (e.FullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
             {
-                var mappedPath = this.MapDestinationPath(e.FullPath);
                 var eventArgs = new ChangedEventArgs();
-
-                if (!String.IsNullOrWhiteSpace(mappedPath))
+                try
                 {
-                    this.HandleUpdate(e.FullPath, mappedPath);
+                    var mappedPath = this.MapDestinationPath(e.FullPath);
+                    
 
-                    if (e.OldFullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+                    if (!String.IsNullOrWhiteSpace(mappedPath))
                     {
-                        // True rename
-                        var mappedOldPath = this.MapDestinationPath(e.OldFullPath);
-                        if (!String.IsNullOrWhiteSpace(mappedOldPath) && File.Exists(mappedOldPath))
+                        try
                         {
-                            this.HandleDeletion(mappedOldPath);
+                            this.HandleUpdate(e.FullPath, mappedPath);
                         }
-                        eventArgs.Title = e.ChangeType.ToString();
-                        eventArgs.Text = $"{mappedOldPath} -> {mappedPath}";
-                        eventArgs.ChangeEventType = e.ChangeType;
+                        catch (IOException)
+                        {
+                            try
+                            {
+                                Thread.Sleep(1000);
+                                this.HandleUpdate(e.FullPath, mappedPath);
+                            }
+                            catch (IOException ex)
+                            {
+                                eventArgs.Title = ex.Message;
+                                eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
+                                eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                            }
+                        }
+
+                        if (e.OldFullPath.EndsWith(".cshtml", StringComparison.OrdinalIgnoreCase))
+                        {
+                            // True rename
+                            var mappedOldPath = this.MapDestinationPath(e.OldFullPath);
+
+                            eventArgs.Title = e.ChangeType.ToString();
+                            eventArgs.Text = $"{mappedOldPath} -> {mappedPath}";
+                            eventArgs.ChangeEventType = e.ChangeType;
+                            
+                            if (!String.IsNullOrWhiteSpace(mappedOldPath) && File.Exists(mappedOldPath))
+                            {
+                                try
+                                {
+                                    this.HandleDeletion(mappedPath);
+                                }
+                                catch (IOException)
+                                {
+                                    try
+                                    {
+                                        Thread.Sleep(1000);
+                                        this.HandleDeletion(mappedPath);
+                                    }
+                                    catch (IOException ex)
+                                    {
+                                        eventArgs.Title = ex.Message;
+                                        eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
+                                        eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                    }
+                                }
+                            }
+
+
+                        }
+                        else
+                        {
+                            eventArgs.ChangeEventType = WatcherChangeTypes.Changed;
+                            eventArgs.Title = eventArgs.ChangeEventType.ToString();
+                            eventArgs.Text = mappedPath;
+                        }
 
                     }
-                    else
-                    {
-                        eventArgs.ChangeEventType = WatcherChangeTypes.Changed;
-                        eventArgs.Title = eventArgs.ChangeEventType.ToString();
-                        eventArgs.Text = mappedPath;                        
-                    }
-                   
                 }
+                catch (Exception ex)
+                {
+                    eventArgs.Title = "Exception thrown";
+                    eventArgs.Text = ex.Message;
+                    eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                }
+
 
                 this.OnChange?.Invoke(this, eventArgs);
             }
@@ -132,31 +181,75 @@
             {
                 return;
             }
+            
             var mappedPath = this.MapDestinationPath(e.FullPath);
             var eventArgs = new ChangedEventArgs()
             {
                 Title = e.ChangeType.ToString(),
                 Text = mappedPath,
                 ChangeEventType = e.ChangeType
-            };            
-            if (!String.IsNullOrWhiteSpace(mappedPath))
+            };
+            try
             {
-                if (e.ChangeType == WatcherChangeTypes.Deleted)
+                if (!String.IsNullOrWhiteSpace(mappedPath))
                 {
-                    if(File.Exists(mappedPath))
+                    if (e.ChangeType == WatcherChangeTypes.Deleted)
                     {
-                        this.HandleDeletion(mappedPath);
+                        if (File.Exists(mappedPath))
+                        {
+                            try
+                            {
+                                this.HandleDeletion(mappedPath);
+                            }
+                            catch (IOException)
+                            {
+                                try
+                                {
+                                    Thread.Sleep(1000);
+                                    this.HandleDeletion(mappedPath);
+                                }
+                                catch (IOException ex)
+                                {
+                                    eventArgs.Title = ex.Message;
+                                    eventArgs.Text = $"Failed to delete after 2nd try {mappedPath}";
+                                    eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            this.HandleUpdate(e.FullPath, mappedPath);
+                        }
+                        catch (IOException)
+                        {
+                            try
+                            {
+                                Thread.Sleep(1000);
+                                this.HandleUpdate(e.FullPath, mappedPath);
+                            }
+                            catch (IOException ex)
+                            {
+                                eventArgs.Title = ex.Message;
+                                eventArgs.Text = $"Failed to update after 2nd try {mappedPath}";
+                                eventArgs.ChangeEventType = WatcherChangeTypes.All;
+                            }
+                        }
                     }
                 }
                 else
                 {
-                   this.HandleUpdate(e.FullPath, mappedPath);
+                    eventArgs.Title = "Error";
+                    eventArgs.Text = $"Failed to map path: '{e.FullPath}' -> ${this.AppConfig.DestinationPath}";
+                    eventArgs.ChangeEventType = WatcherChangeTypes.All;
                 }
             }
-            else
+            catch (Exception ex)
             {
-                eventArgs.Title = "Error";
-                eventArgs.Text = $"Failed to map path: '{e.FullPath}' -> ${this.AppConfig.DestinationPath}";
+                eventArgs.Title = "Exception thrown";
+                eventArgs.Text = ex.Message;
                 eventArgs.ChangeEventType = WatcherChangeTypes.All;
             }
 

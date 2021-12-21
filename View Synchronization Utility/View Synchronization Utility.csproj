@@ -8,13 +8,16 @@
 		<Nullable>enable</Nullable>
 		<DebugType>embedded</DebugType>
 		<NeutralLanguage>en</NeutralLanguage>
-		<AssemblyVersion>1.0.0</AssemblyVersion>
-		<FileVersion>1.0.0</FileVersion>
+		<ProductVersion>1.0.3</ProductVersion>
+		<AssemblyVersion>1.0.3</AssemblyVersion>
+		<FileVersion>1.0.3</FileVersion>
+		<ApplicationIcon>Icons\VSU-On.ico</ApplicationIcon>
+	
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Content Include="appconfig.json">
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
 	</ItemGroup>
 
@@ -27,10 +30,9 @@
 		<EmbeddedResource Include="Icons\FolderRight.png" />
 		<EmbeddedResource Include="Icons\FolderUp.png" />
 		<EmbeddedResource Include="Icons\menu-open.png" />
-		<EmbeddedResource Include="Icons\pause.png"/>
+		<EmbeddedResource Include="Icons\pause.png" />
 		<EmbeddedResource Include="Icons\resume.png" />
 		<EmbeddedResource Include="Icons\VSU-Off.ico" />
-		<EmbeddedResource Include="Icons\VSU-On.png" />
 		<EmbeddedResource Include="Icons\VSU-On.ico" />
 	</ItemGroup>
 

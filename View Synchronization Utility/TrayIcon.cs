@@ -190,6 +190,7 @@
                 this.NotifyIcon.Icon = item.Checked ? this.PausedIcon : this.RunningIcon;
                 item.Text = item.Checked ? "&Resume" : "&Pause";
                 item.Image = item.Checked ? this.Images["resume"] : this.Images["pause"];
+                Utils.WriteToTrace($"Watcher is now {(item.Checked ? "paused" : "resumed")}");
             }
         }
 

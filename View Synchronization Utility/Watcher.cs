@@ -15,6 +15,8 @@
         private AppConfig AppConfig { get; }
         private List<String> FileHandles { get; }
 
+        private List<String> PathsToIgnore { get; }
+
         public Watcher(AppConfig appConfig)
         {
             this.AppConfig = appConfig;
@@ -22,6 +24,8 @@
 
             this.CreateOrUpdateWatcher();
             this.AppConfig.OnChange += this.AppConfig_OnChange;
+            // Preformat the list so that we don't have to do it every time to the list is iterated. Might safe a few ms.
+            this.PathsToIgnore = this.AppConfig.PathsToIgnore.Select(p => $"{Path.DirectorySeparatorChar}{p}{Path.DirectorySeparatorChar}").ToList();
 
         }
 
@@ -323,7 +327,7 @@
             mappedPath = String.Empty;
             
             // Exclude some of the directories, like obj and bin, because we don't want to sync those anyways.
-            if (!this.AppConfig.PathsToIgnore.Any(path => source.IndexOf($"{Path.DirectorySeparatorChar}{path}{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) > 0))
+            if (!this.PathsToIgnore.Any(path => source.IndexOf(path, StringComparison.OrdinalIgnoreCase) > 0))
             {
                 // If the path does not contain the Views folder, ignore it.
                 var viewsIndex = source.IndexOf($"{Path.DirectorySeparatorChar}Views{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
